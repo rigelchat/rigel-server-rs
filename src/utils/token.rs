@@ -1,5 +1,5 @@
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -30,9 +30,9 @@ pub fn sign_token(user_id: &str, secret: &str) -> String {
 
 pub fn verify_token(token: &str, secret: &str) -> Result<String, &'static str> {
     let token = token.trim();
-    let parts: Vec<&str> = token.split('.').collect();
+    let parts: Vec<&str> = token.split(".").collect();
     if parts.len() != 3 {
-        return Err("token malformed");
+        return Err("Token malformed");
     }
 
     let payload64 = parts[0];
@@ -40,21 +40,21 @@ pub fn verify_token(token: &str, secret: &str) -> Result<String, &'static str> {
     let signature64 = parts[2];
 
     if timestamp64.len() != 6 {
-        return Err("invalid timestamp length");
+        return Err("Invalid timestamp length");
     }
 
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     let msg = format!("{}.{}", payload64, timestamp64);
     mac.update(msg.as_bytes());
 
-    let sig_bytes = URL_SAFE_NO_PAD.decode(signature64).map_err(|_| "invalid signature encoding")?;
+    let sig_bytes = URL_SAFE_NO_PAD.decode(signature64).map_err(|_| "Invalid signature encoding")?;
 
     if mac.verify_slice(&sig_bytes).is_err() {
-        return Err("invalid signature");
+        return Err("Invalid signature");
     }
 
-    let user_id_bytes = URL_SAFE_NO_PAD.decode(payload64).map_err(|_| "token payload decode error")?;
-    let user_id = String::from_utf8(user_id_bytes).map_err(|_| "token payload is not utf8")?;
+    let user_id_bytes = URL_SAFE_NO_PAD.decode(payload64).map_err(|_| "Token payload decode error")?;
+    let user_id = String::from_utf8(user_id_bytes).map_err(|_| "Token payload is not utf8")?;
 
     return Ok(user_id);
 }
