@@ -4,9 +4,15 @@ use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 type HmacSha256 = Hmac<Sha256>;
-const DISCORD_EPOCH: u64 = 1420070400000;
+const DISCORD_EPOCH: u64 = 1420070400000; // move to constants
 
-pub fn sign_token(user_id: &str, secret: &str) -> String {
+pub struct TokenData {
+    pub token: String,
+    pub timestamp: u64,
+    pub timestamp64: String,
+}
+
+pub fn sign_token(user_id: &str, secret: &str) -> TokenData {
     let payload64 = URL_SAFE_NO_PAD.encode(user_id);
 
     let now = SystemTime::now()
@@ -25,7 +31,11 @@ pub fn sign_token(user_id: &str, secret: &str) -> String {
     let signature_bytes = mac.finalize().into_bytes();
     let signature64 = URL_SAFE_NO_PAD.encode(signature_bytes);
 
-    return format!("{}.{}", msg, signature64);
+    return TokenData {
+        token: format!("{}.{}", msg, signature64),
+        timestamp: now,
+        timestamp64,
+    };
 }
 
 pub fn verify_token(token: &str, secret: &str) -> Result<String, &'static str> {
