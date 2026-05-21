@@ -1,3 +1,11 @@
+// This file is a Rust port/adaptation of the JavaScript implementation
+// from the Sapphire Utilities project:
+// https://github.com/sapphiredev/utilities/tree/main/packages/snowflake
+//
+// Original implementation licensed under MIT.
+
+#![allow(dead_code)]
+
 use std::cmp::Ordering;
 use std::sync::atomic::{AtomicU16, Ordering as AtomicOrdering};
 use std::time::{SystemTime, UNIX_EPOCH};
