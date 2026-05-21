@@ -7,7 +7,7 @@
 
   Provides a Discord-compatible REST API, Gateway and CDN.
 
-  [![Rigel](https://img.shields.io/badge/Rigel-Join_Public_Instance-0?style=for-the-badge&logo=rocket&logoColor=white)]()
+  [![Rigel](https://img.shields.io/badge/Rigel-Join_Public_Instance-brightgreen?style=for-the-badge&logo=rocket&logoColor=white)](https://app.rigel.chat/invite/rigel?instance=https%3A%2F%2Fserver.rigel.chat)
   [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
   [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 </div>
@@ -21,7 +21,7 @@ Rigel Core is also fully compatible with the **[Spacebar](https://github.com/spa
 ## 🛠️ Prerequisites
 
 * [Rust](https://rust-lang.org/tools/install) (latest stable recommended)
-* A Database (e.g., SQLite/PostgreSQL/MySQL)
+* [MySQL](https://dev.mysql.com/downloads) (A MySQL/MariaDB server is required to store data)
 
 ## 🚀 Getting Started
 
@@ -32,7 +32,30 @@ git clone https://github.com/rigelchat/rigel-server-rs.git
 cd rigel-server-rs
 ```
 
-### 2. Configuration
+### 2. Database Setup
+
+Rigel requires a MySQL database to run. You can set it up natively or via Docker.
+
+Install MySQL:
+```bash
+sudo apt install mariadb-server # (recommended)
+# or
+sudo apt install mysql-server
+
+```
+
+Log into your MySQL console:
+```bash
+mysql -u root -p
+```
+
+Then, create the database for Rigel:
+```sql
+CREATE DATABASE rigel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+```
+
+### 3. Configuration
 
 Copy the example environment file and configure your database and keys:
 
@@ -42,15 +65,15 @@ cp .env.example .env
 
 *Edit `.env` to set your `PORT`, `DATABASE_URL`, and `AUTH_SECRET`.*
 
-### 3. Run Development Server
+### 4. Run Development Server
 
-To build and run the server using Cargo:
+To build and run the server using Cargo. This will automatically run any pending database migrations.
 
 ```bash
 cargo run
 ```
 
-### 4. Build for Production
+### 5. Build for Production
 
 ```bash
 cargo build --release
