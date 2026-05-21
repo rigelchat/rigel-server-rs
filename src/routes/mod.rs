@@ -1,18 +1,12 @@
-pub mod auth;
-pub mod channels;
-pub mod gateway;
-pub mod guilds;
-pub mod messages;
-pub mod ping;
-pub mod users;
+pub mod api;
 pub mod well_known;
 
 use axum::Router;
 use crate::db::AppState;
 
-pub fn api_router() -> Router<AppState> {
+pub fn router() -> Router<AppState> {
     return Router::new()
-        .nest("/auth", auth::router())
-        .nest("/gateway", gateway::router())
-        .nest("/ping", ping::router());
+        .nest("/api", api::router())
+        .nest("/api/v0", api::router())
+        .nest("/.well-known", well_known::router());
 }
