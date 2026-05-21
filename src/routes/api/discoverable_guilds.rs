@@ -46,8 +46,8 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         let banner: Option<String> = row.try_get("banner").ok();
         let description: Option<String> = row.try_get("description").ok();
         let vanity_url_code: Option<String> = row.try_get("vanity_url_code").ok();
-        let member_count: i64 = row.try_get("approximate_member_count").unwrap_or(0);
-        let mut presence_count: i64 = 0;
+        let member_count: u64 = row.try_get("approximate_member_count").unwrap_or(0);
+        let mut presence_count: u64 = 0;
 
         if !connected_user_ids.is_empty() {
             let placeholders = vec!["?"; connected_user_ids.len()].join(", ");
@@ -73,7 +73,7 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         });
     }
 
-    let total = guilds.len() as i64;
+    let total = guilds.len() as u64;
 
     return Ok(Json(DiscoverableGuildsResponse {
         limit: total,
@@ -91,14 +91,14 @@ pub struct DiscoverableGuild {
     banner: Option<String>,
     description: Option<String>,
     vanity_url_code: Option<String>,
-    approximate_member_count: i64,
-    approximate_presence_count: i64
+    approximate_member_count: u64,
+    approximate_presence_count: u64
 }
 
 #[derive(Serialize)]
 pub struct DiscoverableGuildsResponse {
     guilds: Vec<DiscoverableGuild>,
-    offset: i64,
-    limit: i64,
-    total: i64
+    offset: u64,
+    limit: u64,
+    total: u64
 }

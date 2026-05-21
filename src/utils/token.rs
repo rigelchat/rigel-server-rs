@@ -12,7 +12,7 @@ pub struct TokenData {
     pub timestamp64: String,
 }
 
-pub fn sign_token(user_id: &str, secret: &str) -> TokenData {
+pub fn sign(user_id: &str, secret: &str) -> TokenData {
     let payload64 = URL_SAFE_NO_PAD.encode(user_id);
 
     let now = SystemTime::now()
@@ -38,7 +38,7 @@ pub fn sign_token(user_id: &str, secret: &str) -> TokenData {
     };
 }
 
-pub fn verify_token(token: &str, secret: &str) -> Result<String, &'static str> {
+pub fn verify(token: &str, secret: &str) -> Result<String, &'static str> {
     let token = token.trim();
     let parts: Vec<&str> = token.split(".").collect();
     if parts.len() != 3 {

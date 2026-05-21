@@ -37,17 +37,17 @@ async fn get_user_profile(
 struct UserProfileRow {
     bio: Option<String>,
     pronouns: Option<String>,
-    accent_color: Option<i64>,
-    theme_color_primary: Option<i64>,
-    theme_color_secondary: Option<i64>,
+    accent_color: Option<u64>,
+    theme_color_primary: Option<u64>,
+    theme_color_secondary: Option<u64>,
 }
 
 #[derive(Serialize)]
 pub struct UserProfileData {
     pub bio: Option<String>,
     pub pronouns: Option<String>,
-    pub accent_color: Option<i64>,
-    pub theme_colors: Option<[i64; 2]>,
+    pub accent_color: Option<u64>,
+    pub theme_colors: Option<[u64; 2]>,
 }
 
 #[derive(Serialize)]

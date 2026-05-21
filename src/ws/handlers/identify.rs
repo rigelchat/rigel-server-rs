@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use tracing::{info, error};
 
 use crate::db::AppState;
-use crate::utils::token::verify_token;
+use crate::utils::token::verify;
 use crate::utils::constants;
 use crate::ws::models::IdentifyPayload;
 
@@ -14,7 +14,7 @@ pub async fn handle(
     payload: IdentifyPayload,
 ) {
     let secret = std::env::var("AUTH_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let user_id = match verify_token(&payload.token, &secret) {
+    let user_id = match verify(&payload.token, &secret) {
         Ok(id) => id,
         Err(e) => {
             error!("Identify token validation failed: {}", e);
@@ -53,14 +53,14 @@ pub async fn handle(
     };
 
     let user_obj = json!({
-        "id": user_row.try_get::<String, _>("id").unwrap_or_default(),
-        "bot": user_row.try_get::<i32, _>("bot").unwrap_or(0) != 0,
-        "public_flags": user_row.try_get::<i32, _>("public_flags").unwrap_or(0),
-        "username": user_row.try_get::<String, _>("username").unwrap_or_default(),
-        "global_name": user_row.try_get::<Option<String>, _>("global_name").unwrap_or_default(),
-        "discriminator": user_row.try_get::<Option<String>, _>("discriminator").unwrap_or_default(),
-        "avatar": user_row.try_get::<Option<String>, _>("avatar").unwrap_or_default(),
-        "banner": user_row.try_get::<Option<String>, _>("banner").unwrap_or_default(),
+        "id": user_row.try_get::<String, _>("id").unwrap(),
+        "bot": user_row.try_get::<bool, _>("bot").unwrap(),
+        "public_flags": user_row.try_get::<u32, _>("public_flags").unwrap(),
+        "username": user_row.try_get::<String, _>("username").unwrap(),
+        "global_name": user_row.try_get::<Option<String>, _>("global_name").unwrap(),
+        "discriminator": user_row.try_get::<Option<String>, _>("discriminator").unwrap(),
+        "avatar": user_row.try_get::<Option<String>, _>("avatar").unwrap(),
+        "banner": user_row.try_get::<Option<String>, _>("banner").unwrap()
     });
 
     let user_settings_row = sqlx::query("SELECT * FROM user_settings WHERE id = ?")
@@ -71,12 +71,12 @@ pub async fn handle(
 
     let user_settings_obj = if let Some(row) = user_settings_row {
         json!({
-            "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "online".to_string()),
-            "afk_timeout": row.try_get::<i32, _>("afk_timeout").unwrap_or(600),
-            "locale": row.try_get::<String, _>("locale").unwrap_or_else(|_| "en-US".to_string()),
-            "theme": row.try_get::<String, _>("theme").unwrap_or_else(|_| "dark".to_string()),
-            "background_gradient_preset": row.try_get::<Option<String>, _>("background_gradient_preset").unwrap_or_default(),
-            "developer_mode": row.try_get::<i32, _>("developer_mode").unwrap_or(0) != 0,
+            "status": row.try_get::<String, _>("status").unwrap(),
+            "afk_timeout": row.try_get::<u32, _>("afk_timeout").unwrap(),
+            "locale": row.try_get::<String, _>("locale").unwrap(),
+            "theme": row.try_get::<String, _>("theme").unwrap(),
+            "background_gradient_preset": row.try_get::<Option<String>, _>("background_gradient_preset").unwrap(),
+            "developer_mode": row.try_get::<bool, _>("developer_mode").unwrap()
         })
     } else {
         json!(null)
@@ -149,40 +149,40 @@ pub async fn handle(
 
     let mut users_map = HashMap::new();
     for u in all_guild_users {
-        let u_id: String = u.try_get("id").unwrap_or_default();
+        let u_id: String = u.try_get("id").unwrap();
         users_map.insert(u_id, json!({
-            "id": u.try_get::<String, _>("id").unwrap_or_default(),
-            "username": u.try_get::<String, _>("username").unwrap_or_default(),
-            "global_name": u.try_get::<Option<String>, _>("global_name").unwrap_or_default(),
-            "discriminator": u.try_get::<Option<String>, _>("discriminator").unwrap_or_default(),
-            "avatar": u.try_get::<Option<String>, _>("avatar").unwrap_or_default(),
-            "bot": u.try_get::<i32, _>("bot").unwrap_or(0) != 0,
+            "id": u.try_get::<String, _>("id").unwrap(),
+            "username": u.try_get::<String, _>("username").unwrap(),
+            "global_name": u.try_get::<Option<String>, _>("global_name").unwrap(),
+            "discriminator": u.try_get::<Option<String>, _>("discriminator").unwrap(),
+            "avatar": u.try_get::<Option<String>, _>("avatar").unwrap(),
+            "bot": u.try_get::<bool, _>("bot").unwrap()
         }));
     }
 
     let mut grouped_channels = HashMap::new();
     for c in channels {
-        let gid: String = c.try_get("guild_id").unwrap_or_default();
+        let gid: String = c.try_get("guild_id").unwrap();
         grouped_channels.entry(gid).or_insert_with(Vec::new).push(json!({
-            "id": c.try_get::<String, _>("id").unwrap_or_default(),
-            "type": c.try_get::<i32, _>("type").unwrap_or(0),
-            "position": c.try_get::<i32, _>("position").unwrap_or(0),
-            "guild_id": c.try_get::<String, _>("guild_id").unwrap_or_default(),
-            "parent_id": c.try_get::<Option<String>, _>("parent_id").unwrap_or_default(),
-            "name": c.try_get::<String, _>("name").unwrap_or_default(),
+            "id": c.try_get::<String, _>("id").unwrap(),
+            "type": c.try_get::<u32, _>("type").unwrap(),
+            "position": c.try_get::<u32, _>("position").unwrap(),
+            "guild_id": c.try_get::<String, _>("guild_id").unwrap(),
+            "parent_id": c.try_get::<Option<String>, _>("parent_id").unwrap(),
+            "name": c.try_get::<String, _>("name").unwrap()
         }));
     }
 
     let mut grouped_roles = HashMap::new();
     for r in roles {
-        let gid: String = r.try_get("guild_id").unwrap_or_default();
+        let gid: String = r.try_get("guild_id").unwrap();
         grouped_roles.entry(gid).or_insert_with(Vec::new).push(json!({
-            "id": r.try_get::<String, _>("id").unwrap_or_default(),
-            "guild_id": r.try_get::<String, _>("guild_id").unwrap_or_default(),
-            "position": r.try_get::<i32, _>("position").unwrap_or(0),
-            "name": r.try_get::<String, _>("name").unwrap_or_default(),
-            "color": r.try_get::<i32, _>("color").unwrap_or(0),
-            "permissions": r.try_get::<i64, _>("permissions").unwrap_or(0).to_string(),
+            "id": r.try_get::<String, _>("id").unwrap(),
+            "guild_id": r.try_get::<String, _>("guild_id").unwrap(),
+            "position": r.try_get::<u32, _>("position").unwrap(),
+            "name": r.try_get::<String, _>("name").unwrap(),
+            "color": r.try_get::<u32, _>("color").unwrap(),
+            "permissions": r.try_get::<u64, _>("permissions").unwrap().to_string()
         }));
     }
 
@@ -231,7 +231,7 @@ pub async fn handle(
                     "guild_id": gid.clone(),
                     "user": user_data,
                     "roles": roles,
-                    "joined_at": gm.try_get::<i64, _>("joined_at").unwrap_or(0),
+                    "joined_at": gm.try_get::<u64, _>("joined_at").unwrap_or(0),
                 }));
             }
         }

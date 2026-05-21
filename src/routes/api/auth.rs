@@ -2,6 +2,7 @@ use axum::{Router, routing::post, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
+use::tracing::error;
 use crate::AppState;
 use crate::db::models::User;
 use crate::db::queries::get_user_by_login;
@@ -17,81 +18,90 @@ pub fn router() -> Router<AppState> {
 async fn login(State(state): State<AppState>, Json(payload): Json<LoginRequest>) -> Result<Json<LoginResponse>, StatusCode> {
     let password = payload.password.as_deref().unwrap_or("");
 
-    if let Ok(Some(user)) = get_user_by_login(&state, &payload.login).await {
-        if let Some(hash_str) = &user.password_hash {
-            if verify(password, hash_str).unwrap_or(false) {
-                let mut tx = state.db.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let user = get_user_by_login(&state, &payload.login)
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
 
-                // Insert into user_settings and user_profiles just in case
-                sqlx::query("INSERT OR IGNORE INTO user_settings (id) VALUES (?)")
-                    .bind(&user.id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let password_hash_str = user.password_hash.as_ref().ok_or(StatusCode::UNAUTHORIZED)?;
+    if !verify(password, password_hash_str).unwrap_or(false) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
 
-                sqlx::query("INSERT OR IGNORE INTO user_profiles (id) VALUES (?)")
-                    .bind(&user.id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-                let secret = std::env::var("AUTH_SECRET").unwrap_or_default();
-                let token_data = token::sign_token(&user.id, &secret);
+    sqlx::query("INSERT IGNORE INTO user_settings (id) VALUES (?)")
+        .bind(&user.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
-                // Insert into user_sessions
-                sqlx::query("INSERT INTO user_sessions (id, user_id, created_at) VALUES (?, ?, ?)")
-                    .bind(&token_data.timestamp64)
-                    .bind(&user.id)
-                    .bind(token_data.timestamp as i64)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query("INSERT IGNORE INTO user_profiles (id) VALUES (?)")
+        .bind(&user.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
-                tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let secret = std::env::var("AUTH_SECRET").unwrap_or_default();
+    let signed = token::sign(&user.id, &secret);
 
-                return Ok(Json(LoginResponse { token: token_data.token }));
-            };
-        };
-    };
+    sqlx::query("INSERT INTO user_sessions (id, user_id, created_at) VALUES (?, ?, ?)")
+        .bind(&signed.timestamp64)
+        .bind(&user.id)
+        .bind(signed.timestamp)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
-    return Err(StatusCode::UNAUTHORIZED);
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    return Ok(Json(LoginResponse { token: signed.token }));
 }
 
 // POST /api/auth/register
 async fn register(State(state): State<AppState>, Json(payload): Json<RegisterRequest>) -> Result<Json<LoginResponse>, StatusCode> {
     let raw_password = payload.password.unwrap_or_else(|| "".to_string());
-    
-    // Hasher le mot de passe
-    let hashed = hash(raw_password, DEFAULT_COST).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+    let hashed_password = hash(raw_password, DEFAULT_COST).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let mut tx = state.db.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE bot = 0")
+    let count: (u64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE bot = 0")
         .fetch_one(&mut *tx)
         .await
         .unwrap_or((1,));
-    let is_first_user = count.0 == 0;
 
-    let public_flags: i32 = if is_first_user { 1 } else { 0 };
+    let is_first_user = count.0 == 0;
+    let public_flags: u32 = if is_first_user { 1 } else { 0 };
 
     let new_user = User {
         id: DISCORD_SNOWFLAKE.generate(None).to_string(),
-        created_at: Utc::now().timestamp_millis(),
-        bot: 0,
+        created_at: Utc::now().timestamp_millis() as u64,
+        bot: false,
         public_flags,
         username: payload.username.clone(),
-        password_hash: Some(hashed),
+        password_hash: Some(hashed_password),
         global_name: None,
         discriminator: Some("0".to_string()),
         avatar: None,
-        banner: None,
+        banner: None
     };
-    
-    // Insérer dans la BDD
-    sqlx::query(
-        "INSERT INTO users (id, created_at, bot, public_flags, username, password_hash, global_name, discriminator, avatar, banner) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    )
+
+    sqlx::query("
+        INSERT INTO users (id, created_at, bot, public_flags, username, password_hash, global_name, discriminator, avatar, banner) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ")
         .bind(&new_user.id)
         .bind(new_user.created_at)
         .bind(new_user.bot)
@@ -104,40 +114,46 @@ async fn register(State(state): State<AppState>, Json(payload): Json<RegisterReq
         .bind(&new_user.banner)
         .execute(&mut *tx)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
-    sqlx::query("INSERT OR IGNORE INTO user_settings (id) VALUES (?)")
+    sqlx::query("INSERT IGNORE INTO user_settings (id) VALUES (?)")
         .bind(&new_user.id)
         .execute(&mut *tx)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
-    sqlx::query("INSERT OR IGNORE INTO user_profiles (id) VALUES (?)")
+    sqlx::query("INSERT IGNORE INTO user_profiles (id) VALUES (?)")
         .bind(&new_user.id)
         .execute(&mut *tx)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
-    // Générer le token et retourner
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
+
     let secret = std::env::var("AUTH_SECRET").unwrap_or_default();
-    let token_data = token::sign_token(&new_user.id, &secret);
-    
-    sqlx::query(
-        r#"
-        INSERT INTO user_sessions (id, user_id, created_at)
-        VALUES (?, ?, ?)
-        "#
-    )
-    .bind(&token_data.timestamp64)
-    .bind(&new_user.id)
-    .bind(token_data.timestamp as i64)
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let signed = token::sign(&new_user.id, &secret);
+
+    sqlx::query("INSERT INTO user_sessions (id, user_id, created_at) VALUES (?, ?, ?)" )
+        .bind(&signed.timestamp64)
+        .bind(&new_user.id)
+        .bind(signed.timestamp)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
     tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(LoginResponse { token: token_data.token }))
+    return Ok(Json(LoginResponse { token: signed.token }));
 }
 
 #[derive(Serialize)]

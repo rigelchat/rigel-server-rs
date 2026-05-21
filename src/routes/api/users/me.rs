@@ -24,7 +24,7 @@ async fn update_settings(
     
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or((StatusCode::UNAUTHORIZED, "Missing authorization".to_string()))?;
     let secret = std::env::var("AUTH_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let user_id = crate::utils::token::verify_token(auth_header, &secret).map_err(|e| (StatusCode::UNAUTHORIZED, e.to_string()))?;
+    let user_id = crate::utils::token::verify(auth_header, &secret).map_err(|e| (StatusCode::UNAUTHORIZED, e.to_string()))?;
 
     let mut query = QueryBuilder::<MySql>::new("UPDATE user_settings SET ");
     let mut separated = query.separated(", ");
@@ -84,7 +84,7 @@ async fn update_profile(
     
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or((StatusCode::UNAUTHORIZED, "Missing authorization".to_string()))?;
     let secret = std::env::var("AUTH_SECRET").unwrap_or_else(|_| "secret".to_string());
-    let user_id = crate::utils::token::verify_token(auth_header, &secret).map_err(|e| (StatusCode::UNAUTHORIZED, e.to_string()))?;
+    let user_id = crate::utils::token::verify(auth_header, &secret).map_err(|e| (StatusCode::UNAUTHORIZED, e.to_string()))?;
 
     let mut query = QueryBuilder::<MySql>::new("UPDATE user_profiles SET ");
     let mut separated = query.separated(", ");
@@ -152,32 +152,24 @@ pub struct UserSettings {
     pub locale: Option<String>,
     pub theme: Option<String>,
     pub background_gradient_preset: Option<String>,
-    #[serde(serialize_with = "serialize_as_bool")]
-    pub developer_mode: i64, 
-}
-
-fn serialize_as_bool<S>(value: &i64, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    serializer.serialize_bool(*value != 0)
+    pub developer_mode: bool
 }
 
 #[derive(Deserialize)]
 pub struct UpdateProfileReq {
     pub bio: Option<String>,
     pub pronouns: Option<String>,
-    pub accent_color: Option<i64>,
-    pub theme_colors: Option<Vec<Option<i64>>>,
+    pub accent_color: Option<u64>,
+    pub theme_colors: Option<Vec<Option<u64>>>,
 }
 
 #[derive(FromRow)]
 struct UserProfileRow {
     bio: Option<String>,
     pronouns: Option<String>,
-    accent_color: Option<i64>,
-    theme_color_primary: Option<i64>,
-    theme_color_secondary: Option<i64>,
+    accent_color: Option<u64>,
+    theme_color_primary: Option<u64>,
+    theme_color_secondary: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -189,8 +181,8 @@ pub struct UserProfileRes {
 pub struct UserProfileData {
     pub bio: Option<String>,
     pub pronouns: Option<String>,
-    pub accent_color: Option<i64>,
-    pub theme_colors: Option<[i64; 2]>,
+    pub accent_color: Option<u64>,
+    pub theme_colors: Option<[u64; 2]>,
 }
 
 impl From<UserProfileRow> for UserProfileRes {
