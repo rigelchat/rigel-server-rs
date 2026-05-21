@@ -38,7 +38,7 @@ Rigel requires a MySQL database to run. You can set it up natively or via Docker
 
 Install MySQL:
 ```bash
-sudo apt install mariadb-server # (recommended)
+sudo apt install mariadb # (recommended)
 # or
 sudo apt install mysql-server
 
@@ -46,7 +46,7 @@ sudo apt install mysql-server
 
 Log into your MySQL console:
 ```bash
-mysql -u root -p
+mysql -u root
 ```
 
 Then, create the database for Rigel:
