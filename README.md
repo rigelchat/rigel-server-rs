@@ -12,18 +12,20 @@
   [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 </div>
 
-## ✨ Introduction
+# Introduction
 
 This repository houses the API, Gateway (WebSocket), and CDN for Rigel. It is designed to be self-hostable, highly performant, and compatible with the existing Discord ecosystem of bots and tools.
 
 Rigel Core is also fully compatible with the **[Spacebar](https://github.com/spacebarchat)** project, allowing a seamless transition for users and developers coming from that ecosystem.
 
-## 🛠️ Prerequisites
+# Prerequisites
 
-* [Rust](https://rust-lang.org/tools/install) (latest stable recommended)
-* [MySQL](https://dev.mysql.com/downloads) (A MySQL/MariaDB server is required to store data)
+* Rust compiler
+* MySQL or MariaDB
 
-## 🚀 Getting Started
+# Getting Started
+
+## Build from source
 
 ### 1. Clone the repository
 
@@ -38,10 +40,9 @@ Rigel requires a MySQL database to run. You can set it up natively or via Docker
 
 Install MySQL:
 ```bash
-sudo apt install mariadb # (recommended)
+sudo apt install mariadb-server # (recommended)
 # or
 sudo apt install mysql-server
-
 ```
 
 Log into your MySQL console:
@@ -81,7 +82,7 @@ cargo build --release
 
 The API will be available at `http://localhost:3000/api/v0`.
 
-## 🧪 Testing
+## Testing
 
 To run the test suite:
 
@@ -89,9 +90,9 @@ To run the test suite:
 cargo test
 ```
 
-## 📚 API Documentation
+## API Documentation
 
-Since Rigel aims for **Discord API Compatibility**, you can refer to the official Discord documentation for endpoints structure, or check our local documentation in the `/docs` folder.
+Since Rigel aims for **Discord API Compatibility**, you can refer to the official Discord documentation for endpoints structure, or check our documentation in the [Wiki](https://github.com/rigelchat/rigel-server-rs/wiki).
 
 ---
 
