@@ -3,29 +3,25 @@
 
   # Rigel Core Server
 
-  **The robust Rust backend powering the Rigel ecosystem.**
+  An alternative implementation of the Discord API, written in Rust.
 
-  Provides a Discord-compatible REST API, Gateway and CDN.
-
-  [![Rigel](https://img.shields.io/badge/Rigel-Join_Public_Instance-brightgreen?style=for-the-badge&logo=rocket&logoColor=white)](https://app.rigel.chat/invite/rigel?instance=https%3A%2F%2Fserver.rigel.chat)
-  [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
-  [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+  [![Rigel](https://img.shields.io/badge/Rigel-Join_Public_Instance-brightgreen?style=for-the-badge&logo=rocket&logoColor=white)](https://rigel.chat/invite/rigel?instance=https%3A%2F%2Frigel.chat)
+  [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=flat-square)](LICENSE)
+  [![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org)
 </div>
 
-# Introduction
+## Introduction
 
-This repository houses the API, Gateway (WebSocket), and CDN for Rigel. It is designed to be self-hostable, highly performant, and compatible with the existing Discord ecosystem of bots and tools.
+Rigel is a self-hostable, alternative server implementation compatible with the Discord API and client ecosystem. It is developed as an independent alternative to projects like **[Spacebar](https://github.com/spacebarchat)**.
 
-Rigel Core is also fully compatible with the **[Spacebar](https://github.com/spacebarchat)** project, allowing a seamless transition for users and developers coming from that ecosystem.
+This repository contains the backend codebase, which includes the REST API, Gateway (WebSocket), and CDN.
 
-# Prerequisites
+## Prerequisites
 
-* Rust compiler
+* Rust compiler (latest stable)
 * MySQL or MariaDB
 
-# Getting Started
-
-## Build from source
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -36,55 +32,42 @@ cd rigel-server-rs
 
 ### 2. Database Setup
 
-Rigel requires a MySQL database to run. You can set it up natively or via Docker.
+Rigel requires a MySQL or MariaDB database.
 
-Install MySQL:
-```bash
-sudo apt install mariadb-server # (recommended)
-# or
-sudo apt install mysql-server
-```
-
-Log into your MySQL console:
-```bash
-mysql -u root
-```
-
-Then, create the database for Rigel:
+Log into your database console:
 ```sql
 CREATE DATABASE rigel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-EXIT;
 ```
 
 ### 3. Configuration
 
-Copy the example environment file and configure your database and keys:
+Copy the example environment file and configure your database connection and secrets:
 
 ```bash
 cp .env.example .env
 ```
 
-*Edit `.env` to set your `PORT`, `DATABASE_URL`, and `AUTH_SECRET`.*
+Modify the `.env` file to set your `PORT`, `DATABASE_URL`, and `AUTH_SECRET`.
 
-### 4. Run Development Server
+### 4. Running the Server
 
-To build and run the server using Cargo. This will automatically run any pending database migrations.
+To start the server in development mode (this will automatically run database migrations):
 
 ```bash
 cargo run
 ```
 
-### 5. Build for Production
+For production builds:
 
 ```bash
 cargo build --release
 ```
 
-The API will be available at `http://localhost:3000/api/v0`.
+The API will listen at `http://localhost:3000/api/v0`.
 
 ## Testing
 
-To run the test suite:
+Run the test suite with:
 
 ```bash
 cargo test
@@ -92,10 +75,10 @@ cargo test
 
 ## API Documentation
 
-Since Rigel aims for **Discord API Compatibility**, you can refer to the official Discord documentation for endpoints structure, or check our documentation in the [Wiki](https://github.com/rigelchat/rigel-server-rs/wiki).
+Rigel aims for compatibility with the Discord API. You can refer to the official Discord developer documentation or check the [Wiki](https://github.com/rigelchat/rigel-server-rs/wiki) for project-specific details.
 
 ---
 
 <div align="center">
-  <sub>Part of the <a href="https://github.com/rigelchat">Rigel Project</a>.</sub>
+  <sub>Part of the <a href="https://github.com/rigelchat">Rigel Project</a>.<sub>
 </div>
