@@ -6,8 +6,8 @@
   An alternative implementation of the Discord API, written in Rust.
 
   [![Rigel](https://img.shields.io/badge/Rigel-Join_Public_Instance-brightgreen?style=for-the-badge&logo=rocket&logoColor=white)](https://rigel.chat/invite/rigel?instance=https%3A%2F%2Frigel.chat)
-  [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=flat-square)](LICENSE)
-  [![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org)
+  [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
+  [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 </div>
 
 ## Introduction
@@ -63,7 +63,7 @@ For production builds:
 cargo build --release
 ```
 
-The API will listen at `http://localhost:3000/api/v0`.
+The API will listen at `http://localhost:3000/api/v0` (also accessible via `http://localhost:3000/api`).
 
 ## Testing
 
