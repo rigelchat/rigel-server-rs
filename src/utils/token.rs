@@ -34,7 +34,7 @@ pub fn sign(user_id: &str, secret: &str) -> TokenData {
     return TokenData {
         token: format!("{}.{}", msg, signature64),
         timestamp: now,
-        timestamp64,
+        timestamp64
     };
 }
 
@@ -43,7 +43,7 @@ pub fn verify(token: &str, secret: &str) -> Result<String, &'static str> {
     let parts: Vec<&str> = token.split(".").collect();
     if parts.len() != 3 {
         return Err("Token malformed");
-    }
+    };
 
     let payload64 = parts[0];
     let timestamp64 = parts[1];
@@ -51,7 +51,7 @@ pub fn verify(token: &str, secret: &str) -> Result<String, &'static str> {
 
     if timestamp64.len() != 6 {
         return Err("Invalid timestamp length");
-    }
+    };
 
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     let msg = format!("{}.{}", payload64, timestamp64);
@@ -61,7 +61,7 @@ pub fn verify(token: &str, secret: &str) -> Result<String, &'static str> {
 
     if mac.verify_slice(&sig_bytes).is_err() {
         return Err("Invalid signature");
-    }
+    };
 
     let user_id_bytes = URL_SAFE_NO_PAD.decode(payload64).map_err(|_| "Token payload decode error")?;
     let user_id = String::from_utf8(user_id_bytes).map_err(|_| "Token payload is not utf8")?;

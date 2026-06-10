@@ -2,9 +2,11 @@ use axum::{Router, routing::post, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
-use::tracing::error;
+use tracing::error;
+use std::env;
+
 use crate::AppState;
-use crate::db::models::User;
+use crate::models::user::User;
 use crate::db::queries::get_user_by_login;
 use crate::utils::{snowflake::DISCORD_SNOWFLAKE, token};
 
@@ -15,7 +17,10 @@ pub fn router() -> Router<AppState> {
 }
 
 // POST /api/auth/login
-async fn login(State(state): State<AppState>, Json(payload): Json<LoginRequest>) -> Result<Json<LoginResponse>, StatusCode> {
+async fn login(
+    State(state): State<AppState>,
+    Json(payload): Json<LoginRequest>
+) -> Result<Json<LoginResponse>, StatusCode> {
     let password = payload.password.as_deref().unwrap_or("");
 
     let user = get_user_by_login(&state, &payload.login)
@@ -29,9 +34,15 @@ async fn login(State(state): State<AppState>, Json(payload): Json<LoginRequest>)
     let password_hash_str = user.password_hash.as_ref().ok_or(StatusCode::UNAUTHORIZED)?;
     if !verify(password, password_hash_str).unwrap_or(false) {
         return Err(StatusCode::UNAUTHORIZED);
-    }
+    };
 
-    let mut tx = state.db.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db
+        .begin()
+        .await
+        .map_err(|_| {
+            tracing::error!("Failed to begin transaction");
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        })?;
 
     sqlx::query("INSERT IGNORE INTO user_settings (id) VALUES (?)")
         .bind(&user.id)
@@ -51,11 +62,11 @@ async fn login(State(state): State<AppState>, Json(payload): Json<LoginRequest>)
             return StatusCode::INTERNAL_SERVER_ERROR;
         })?;
 
-    let secret = std::env::var("AUTH_SECRET").unwrap_or_default();
+    let secret = env::var("AUTH_SECRET").unwrap();
     let signed = token::sign(&user.id, &secret);
 
     sqlx::query("INSERT INTO user_sessions (id, user_id, created_at) VALUES (?, ?, ?)")
-        .bind(&signed.timestamp64)
+        .bind(signed.timestamp64)
         .bind(&user.id)
         .bind(signed.timestamp)
         .execute(&mut *tx)
@@ -65,7 +76,12 @@ async fn login(State(state): State<AppState>, Json(payload): Json<LoginRequest>)
             return StatusCode::INTERNAL_SERVER_ERROR;
         })?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     return Ok(Json(LoginResponse { token: signed.token }));
 }
@@ -75,14 +91,20 @@ async fn register(State(state): State<AppState>, Json(payload): Json<RegisterReq
     let raw_password = payload.password.unwrap_or_else(|| "".to_string());
     let hashed_password = hash(raw_password, DEFAULT_COST).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let mut tx = state.db.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.db
+        .begin()
+        .await
+        .map_err(|_| {
+            tracing::error!("Failed to begin transaction");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-    let count: (u64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE bot = 0")
+    let user_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE bot = 0")
         .fetch_one(&mut *tx)
         .await
-        .unwrap_or((1,));
+        .unwrap();
 
-    let is_first_user = count.0 == 0;
+    let is_first_user = user_count == (0,);
     let public_flags: u32 = if is_first_user { 1 } else { 0 };
 
     let new_user = User {
@@ -151,7 +173,12 @@ async fn register(State(state): State<AppState>, Json(payload): Json<RegisterReq
             return StatusCode::INTERNAL_SERVER_ERROR;
         })?;
 
-    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit()
+        .await
+        .map_err(|err| {
+            error!("{}", err);
+            return StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     return Ok(Json(LoginResponse { token: signed.token }));
 }
@@ -164,11 +191,11 @@ struct LoginResponse {
 #[derive(Deserialize)]
 struct LoginRequest {
     login: String,
-    password: Option<String>,
+    password: Option<String>
 }
 
 #[derive(Deserialize)]
 struct RegisterRequest {
     username: String,
-    password: Option<String>,
+    password: Option<String>
 }
