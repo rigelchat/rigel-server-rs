@@ -1,7 +1,9 @@
 use axum::{Router, routing::get, Json, extract::State, http::StatusCode};
 use serde::Serialize;
-use crate::AppState;
 use sqlx::Row;
+
+use crate::AppState;
+use crate::models::guild::DiscoverableGuild;
 
 pub fn router() -> Router<AppState> {
     return Router::new()
@@ -81,18 +83,6 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         total,
         guilds,
     }));
-}
-
-#[derive(Serialize)]
-pub struct DiscoverableGuild {
-    id: String,
-    name: String,
-    icon: Option<String>,
-    banner: Option<String>,
-    description: Option<String>,
-    vanity_url_code: Option<String>,
-    approximate_member_count: u64,
-    approximate_presence_count: u64
 }
 
 #[derive(Serialize)]
