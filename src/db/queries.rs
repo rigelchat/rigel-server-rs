@@ -1,10 +1,10 @@
-use crate::db::models::{User};
-// use crate::db::models::{User, GatewayUser};
 use crate::AppState;
+// use crate::db::models::{User, GatewayUser};
+use crate::models::user::User;
 
 pub async fn get_user_by_login(state: &AppState, login: &str) -> Result<Option<User>, sqlx::Error> {
     return sqlx::query_as::<_, User>("SELECT * FROM users WHERE username = ?")
-        .bind(login)
+        .bind(&login)
         .fetch_optional(&state.db)
         .await;
 }

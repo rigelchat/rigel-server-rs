@@ -1,4 +1,3 @@
-pub mod models;
 pub mod queries;
 
 use tracing::{info};
@@ -126,26 +125,24 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
 
     sqlx::query(r#"
         CREATE TABLE IF NOT EXISTS channel_permission_overwrites (
-            id VARCHAR(20) NOT NULL PRIMARY KEY,
             type INT UNSIGNED NOT NULL,
             channel_id VARCHAR(20) NOT NULL,
             target_id VARCHAR(20) NOT NULL,
             allow BIGINT UNSIGNED NOT NULL DEFAULT 0,
             deny BIGINT UNSIGNED NOT NULL DEFAULT 0,
-            FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
-            UNIQUE (channel_id, target_id)
+            PRIMARY KEY (channel_id, target_id),
+            FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
         )
     "#).execute(&pool).await?;
 
     sqlx::query(r#"
         CREATE TABLE IF NOT EXISTS guild_members (
-            id VARCHAR(20) NOT NULL PRIMARY KEY,
             joined_at BIGINT UNSIGNED NOT NULL,
             guild_id VARCHAR(20) NOT NULL,
             user_id VARCHAR(20) NOT NULL,
+            PRIMARY KEY (guild_id, user_id),
             FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            UNIQUE (guild_id, user_id)
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     "#).execute(&pool).await?;
 
