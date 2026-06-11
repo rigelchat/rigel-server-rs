@@ -1,22 +1,20 @@
 use futures_util::{SinkExt, StreamExt};
 use axum::{
     extract::{ws::{Message, WebSocket, WebSocketUpgrade}, State},
-    response::IntoResponse,
+    response::IntoResponse
 };
 use serde_json::json;
 use tracing::{debug, error};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::{
-    db::AppState,
-    utils::constants::gateway::{Opcode, HEARTBEAT_INTERVAL}
-};
+use crate::AppState;
 use crate::ws::models::{GatewayPayload, HelloPayload, IdentifyPayload};
-use crate::ws::session::WsSession;
+use crate::ws::session::GatewaySession;
+use crate::utils::constants::gateway::{Opcode, HEARTBEAT_INTERVAL};
 
 pub async fn handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
-    ws.on_upgrade(move |ws| handle_socket(ws, state))
+    return ws.on_upgrade(move |ws| handle_socket(ws, state));
 }
 
 async fn handle_socket(ws: WebSocket, state: AppState) {
@@ -29,19 +27,19 @@ async fn handle_socket(ws: WebSocket, state: AppState) {
 
     {
         let mut sessions = state.sessions.write().await;
-        sessions.insert(session_id.clone(), WsSession::new(session_id.clone(), tx.clone()));
+        sessions.insert(session_id.clone(), GatewaySession::new(session_id.clone(), tx.clone()));
     }
 
     let hello = GatewayPayload::new(
         Opcode::Hello,
         Some(json!(HelloPayload {
             heartbeat_interval: HEARTBEAT_INTERVAL
-        })),
+        }))
     );
 
     if let Ok(text) = serde_json::to_string(&hello) {
         let _ = socket_sender.send(Message::Text(text.into())).await;
-    }
+    };
 
     let session_id_clone = session_id.clone();
     let state_clone = state.clone();
@@ -50,8 +48,8 @@ async fn handle_socket(ws: WebSocket, state: AppState) {
         while let Some(msg) = rx.recv().await {
             if socket_sender.send(Message::Text(msg.into())).await.is_err() {
                 break;
-            }
-        }
+            };
+        };
     });
 
     let mut recv_task = tokio::spawn(async move {
@@ -59,7 +57,7 @@ async fn handle_socket(ws: WebSocket, state: AppState) {
             let msg = match msg {
                 Ok(msg) => msg,
                 Err(e) => {
-                    error!("WebSocket error: {}", e);
+                    error!("{}", e);
                     break;
                 }
             };

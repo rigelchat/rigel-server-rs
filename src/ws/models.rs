@@ -1,20 +1,20 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
 use crate::utils::constants::gateway::Opcode;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GatewayPayload {
+#[derive(Serialize, Deserialize)]
+pub struct GatewayPayload<T = serde_json::Value> {
     pub op: Opcode,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub d: Option<Value>,
+    pub d: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub s: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub t: Option<String>
 }
 
-impl GatewayPayload {
-    pub fn new(op: Opcode, d: Option<Value>) -> Self {
+impl<T> GatewayPayload<T> {
+    pub fn new(op: Opcode, d: Option<T>) -> Self {
         return Self {
             op,
             d,
@@ -22,15 +22,6 @@ impl GatewayPayload {
             t: None
         };
     }
-
-    // pub fn dispatch(t: String, s: u64, d: Value) -> Self {
-    //     return Self {
-    //         op: Opcode::Dispatch,
-    //         d: Some(d),
-    //         s: Some(s),
-    //         t: Some(t)
-    //     };
-    // }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,5 +32,5 @@ pub struct HelloPayload {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentifyPayload {
     pub token: String,
-    pub properties: Value
+    pub properties: serde_json::Value
 }

@@ -1,18 +1,14 @@
 use serde_json::json;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
-use tracing::{info, error};
+use tracing::{debug, error};
 
-use crate::db::AppState;
+use crate::AppState;
+use crate::ws::models::IdentifyPayload;
 use crate::utils::token::verify;
 use crate::utils::constants;
-use crate::ws::models::IdentifyPayload;
 
-pub async fn handle(
-    session_id: &str,
-    state: &AppState,
-    payload: IdentifyPayload,
-) {
+pub async fn handle(session_id: &str, state: &AppState, payload: IdentifyPayload) {
     let secret = std::env::var("AUTH_SECRET").unwrap_or_else(|_| "secret".to_string());
     let user_id = match verify(&payload.token, &secret) {
         Ok(id) => id,
@@ -126,7 +122,7 @@ pub async fn handle(
         for id in &guild_ids { q_ch_bind = q_ch_bind.bind(id); }
         if let Ok(rows) = q_ch_bind.fetch_all(&state.db).await { channels = rows; }
 
-        let q_roles = format!("SELECT * FROM guild_roles WHERE guild_id IN ({})", placeholders);
+        let q_roles = format!("SELECT * FROM roles WHERE guild_id IN ({})", placeholders);
         let mut q_roles_bind = sqlx::query(&q_roles);
         for id in &guild_ids { q_roles_bind = q_roles_bind.bind(id); }
         if let Ok(rows) = q_roles_bind.fetch_all(&state.db).await { roles = rows; }
@@ -266,7 +262,7 @@ pub async fn handle(
     let ready_payload = json!({
         "session_id": session_id,
         "auth_session_id_hash": auth_session_id,
-        "resume_gateway_url": format!("{}/gateway", std::env::var("HOST").unwrap_or_else(|_| "http://localhost:3000".to_string())),
+        "resume_gateway_url": format!("{}/gateway", std::env::var("PUBLIC_WS_URL").unwrap()),
         "sessions": [
             {
                 "session_id": "all",
@@ -282,7 +278,7 @@ pub async fn handle(
         "guilds": final_guilds,
     });
 
-    info!("User {} identified, sending READY", user_id);
+    debug!("User {} identified, sending READY", user_id);
 
     {
         let sessions = state.sessions.read().await;
