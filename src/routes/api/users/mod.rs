@@ -2,13 +2,15 @@ pub mod me;
 
 use axum::{
     extract::{Path, State},
-    http::{StatusCode},
+    http::StatusCode,
     routing::get,
-    Json, Router,
+    Json,
+    Router
 };
 use sqlx::FromRow; 
-use crate::db::AppState;
 use serde::Serialize;
+
+use crate::AppState;
 
 pub fn router() -> Router<AppState> {
     return Router::new()
