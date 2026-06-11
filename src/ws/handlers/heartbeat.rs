@@ -1,13 +1,9 @@
-use crate::db::AppState;
-use crate::ws::models::GatewayPayload;
-use crate::utils::constants;
+use crate::AppState;
+use crate::utils::constants::gateway::Opcode;
 
 pub async fn handle(session_id: &str, state: &AppState) {
     let sessions = state.sessions.read().await;
     if let Some(session) = sessions.get(session_id) {
-        let ack = GatewayPayload::new(constants::gateway::Opcode::HeartbeatAck, None);
-        if let Ok(text) = serde_json::to_string(&ack) {
-            let _ = session.sender.send(text).await;
-        }
-    }
+        let _ = session.send(Opcode::HeartbeatAck, None, None).await;
+    };
 }
