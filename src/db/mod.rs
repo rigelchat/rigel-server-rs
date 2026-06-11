@@ -1,18 +1,8 @@
 pub mod queries;
 
-use tracing::{info};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use std::collections::HashMap;
+use tracing::info;
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 use std::env;
-use crate::ws::session::WsSession;
-
-#[derive(Clone)]
-pub struct AppState { 
-    pub sessions: Arc<RwLock<HashMap<String, WsSession>>>,
-    pub db: MySqlPool
-}
 
 pub async fn init() -> Result<MySqlPool, sqlx::Error> {
     let database_url = env::var("DATABASE_URL")
@@ -47,7 +37,8 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
             pronouns VARCHAR(40) DEFAULT "",
             accent_color INT UNSIGNED DEFAULT NULL,
             theme_color_primary INT UNSIGNED DEFAULT NULL,
-            theme_color_secondary INT UNSIGNED DEFAULT NULL
+            theme_color_secondary INT UNSIGNED DEFAULT NULL,
+            FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE
         )
     "#).execute(&pool).await?;
 
@@ -91,19 +82,19 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
             afk_channel_id VARCHAR(20) DEFAULT NULL,
             afk_timeout INT UNSIGNED NOT NULL DEFAULT 300,
             system_channel_id VARCHAR(20) DEFAULT NULL,
-            system_channel_flag INT NOT NULL DEFAULT 0,
+            system_channel_flags INT UNSIGNED NOT NULL DEFAULT 0,
             discoverable BOOLEAN NOT NULL DEFAULT FALSE
         )
     "#).execute(&pool).await?;
 
     sqlx::query(r#"
-        CREATE TABLE IF NOT EXISTS guild_roles (
+        CREATE TABLE IF NOT EXISTS roles (
             id VARCHAR(20) NOT NULL PRIMARY KEY,
             guild_id VARCHAR(20) NOT NULL,
             position INT UNSIGNED NOT NULL,
             name VARCHAR(100) NOT NULL,
             color INT UNSIGNED NOT NULL DEFAULT 0,
-            unicode_emoji VARCHAR(4) DEFAULT NULL,
+            unicode_emoji VARCHAR(32) DEFAULT NULL,
             hoist BOOLEAN NOT NULL DEFAULT FALSE,
             mentionable BOOLEAN NOT NULL DEFAULT FALSE,
             permissions BIGINT UNSIGNED NOT NULL DEFAULT 0,
@@ -119,7 +110,8 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
             guild_id VARCHAR(20) NOT NULL,
             parent_id VARCHAR(20) DEFAULT NULL,
             name TEXT NOT NULL,
-            FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE
+            FOREIGN KEY (guild_id) REFERENCES guilds(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL
         )
     "#).execute(&pool).await?;
 
@@ -153,7 +145,7 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
             role_id VARCHAR(20) NOT NULL,
             PRIMARY KEY (guild_id, user_id, role_id),
             FOREIGN KEY (guild_id, user_id) REFERENCES guild_members(guild_id, user_id) ON DELETE CASCADE,
-            FOREIGN KEY (role_id) REFERENCES guild_roles(id) ON DELETE CASCADE
+            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
         )
     "#).execute(&pool).await?;
 
@@ -179,7 +171,8 @@ pub async fn init() -> Result<MySqlPool, sqlx::Error> {
             type INT UNSIGNED NOT NULL DEFAULT 0,
             flags INT UNSIGNED NOT NULL DEFAULT 0,
             content TEXT DEFAULT NULL,
-            FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
+            FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+            FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
         )
     "#).execute(&pool).await?;
 
