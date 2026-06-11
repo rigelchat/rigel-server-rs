@@ -7,7 +7,7 @@ mod ws;
 mod utils;
 
 use axum::Router;
-use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
+use tower_http::{cors::{Any as CorsAny, CorsLayer}, services::ServeDir};
 use std::{sync::Arc, collections::HashMap, env};
 use tokio::{net::TcpListener, sync::RwLock};
 use dotenvy::dotenv;
@@ -15,7 +15,6 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 use crate::state::AppState;
-
 
 #[tokio::main]
 async fn main() {
@@ -35,9 +34,9 @@ async fn main() {
     };
 
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_origin(CorsAny)
+        .allow_methods(CorsAny)
+        .allow_headers(CorsAny);
 
     let app = Router::new()
         .nest_service("/cdn", ServeDir::new("static"))
