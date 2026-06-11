@@ -11,7 +11,9 @@ pub fn router() -> Router<AppState> {
 }
 
 // GET /api/discoverable-guilds
-async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<DiscoverableGuildsResponse>, StatusCode> {
+async fn get_discoverable_guilds(
+    State(state): State<AppState>
+) -> Result<Json<DiscoverableGuildsResponse>, StatusCode> {
     let connected_user_ids: Vec<String> = {
         let sessions = state.sessions.read().await;
         sessions.values().filter_map(|s| s.user_id.clone()).collect::<std::collections::HashSet<_>>().into_iter().collect()
@@ -25,10 +27,10 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
             g.banner,
             g.description,
             g.vanity_url_code,
-            COUNT(DISTINCT gm.user_id) as approximate_member_count
+            COUNT(DISTINCT gm.user_id) as member_count
         FROM guilds g
         LEFT JOIN guild_members gm ON g.id = gm.guild_id
-        WHERE g.discoverable = 1
+        WHERE g.discoverable = TRUE
         GROUP BY g.id
         ORDER BY g.name ASC
     ").fetch_all(&state.db).await {
@@ -39,8 +41,8 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         }
     };
 
-    let mut guilds = Vec::new();
-    
+    let mut guilds = vec![];
+
     for row in rows {
         let id: String = row.try_get("id").unwrap_or_default();
         let name: String = row.try_get("name").unwrap_or_default();
@@ -48,8 +50,8 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         let banner: Option<String> = row.try_get("banner").ok();
         let description: Option<String> = row.try_get("description").ok();
         let vanity_url_code: Option<String> = row.try_get("vanity_url_code").ok();
-        let member_count: u64 = row.try_get("approximate_member_count").unwrap_or(0);
-        let mut presence_count: u64 = 0;
+        let member_count = row.try_get("member_count").unwrap();
+        let mut presence_count: i64 = 0;
 
         if !connected_user_ids.is_empty() {
             let placeholders = vec!["?"; connected_user_ids.len()].join(", ");
@@ -59,7 +61,7 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
             for uid in &connected_user_ids { q = q.bind(uid); };
 
             if let Ok(p_row) = q.fetch_one(&state.db).await {
-                presence_count = p_row.try_get("c").unwrap_or(0);
+                presence_count = p_row.try_get("c").unwrap();
             };
         };
 
@@ -81,12 +83,12 @@ async fn get_discoverable_guilds(State(state): State<AppState>) -> Result<Json<D
         limit: total,
         offset: 0,
         total,
-        guilds,
+        guilds
     }));
 }
 
 #[derive(Serialize)]
-pub struct DiscoverableGuildsResponse {
+struct DiscoverableGuildsResponse {
     guilds: Vec<DiscoverableGuild>,
     offset: u64,
     limit: u64,
