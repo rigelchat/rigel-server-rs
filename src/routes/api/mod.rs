@@ -7,7 +7,8 @@ pub mod ping;
 pub mod users;
 
 use axum::Router;
-use crate::db::AppState;
+
+use crate::AppState;
 
 pub fn router() -> Router<AppState> {
     return Router::new()
