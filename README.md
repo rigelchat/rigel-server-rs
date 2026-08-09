@@ -11,7 +11,7 @@
 
 ## Introduction
 
-Rigel is a self-hostable, alternative server implementation compatible with the Discord API and client ecosystem. Developed as an independent project, it is designed to be compatible with both **Fluxer** and **[Spacebar](https://github.com/spacebarchat)** ecosystems.
+Rigel is a self-hostable, alternative server implementation compatible with the Discord API and client ecosystem. Developed as an independent project, it is designed to be compatible with both **[Spacebar](https://github.com/spacebarchat)** or **[https://github.com/fluxerapp/fluxer](Fluxer)**.
 
 This repository contains the backend codebase, which includes the REST API, Gateway (WebSocket), and CDN.
 
