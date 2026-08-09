@@ -37,20 +37,46 @@ async fn update_user(
     let mut has_updates = false;
 
     if let Some(global_name) = &payload.global_name {
-        let global_name = global_name.trim();
+        query.push("global_name = ");
 
-        if global_name.is_empty() || global_name.len() > 32 {
-            return Err((StatusCode::BAD_REQUEST, "global_name must be between 1 and 32 characters".to_string())); // todo: regrouper toutes les erreurs
+        if let Some(global_name) = global_name {
+            let global_name = global_name.trim();
+
+            if global_name.is_empty() || global_name.len() > 32 {
+                return Err((StatusCode::BAD_REQUEST, "global_name must be between 1 and 32 characters".to_string())); // todo: regrouper toutes les erreurs (ajouter un help/util pour generé les erreurs json)
+            };
+
+            query.push_bind(global_name);
+        } else {
+            query.push_bind(Option::<String>::None);
         };
 
-        query.push("global_name = ");
-        query.push_bind(global_name);
         has_updates = true;
     };
 
-    if let Some(avatar) = &payload.avatar {};
+    if let Some(avatar) = &payload.avatar {
+        query.push("avatar = ");
 
-    if let Some(banner) = &payload.banner {};
+        if let Some(avatar) = avatar {
+
+        } else {
+            query.push_bind(Option::<String>::None);
+        };
+
+        has_updates = true;
+    };
+
+    if let Some(banner) = &payload.banner {
+        query.push("banner = ");
+
+        if let Some(banner) = banner {
+
+        } else {
+            query.push_bind(Option::<String>::None);
+        };
+
+        has_updates = true;
+    };
 
     if !has_updates {
         return Err((StatusCode::BAD_REQUEST, "rien a modifier".to_string()));
@@ -81,7 +107,7 @@ async fn update_user(
 async fn update_profile(
     State(state): State<AppState>,
     headers: HeaderMap,
-    Json(payload): Json<UpdateProfileReq>,
+    Json(payload): Json<UpdateProfileRequest>,
 ) -> Result<Json<UserProfileResponse>, (StatusCode, String)> {
     
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok()).ok_or((StatusCode::UNAUTHORIZED, "Missing authorization".to_string()))?;
@@ -208,17 +234,20 @@ async fn update_settings(
 
 #[derive(Deserialize)]
 struct UpdateUserRequest {
-    global_name: Option<String>,
-    avatar: Option<String>,
-    banner: Option<String>
+    #[serde(deserialize_with = "deserialize_double_option")]
+    global_name: Option<Option<String>>,
+    #[serde(deserialize_with = "deserialize_double_option")]
+    avatar: Option<Option<String>>,
+    #[serde(deserialize_with = "deserialize_double_option")]
+    banner: Option<Option<String>>
 }
 
 #[derive(Deserialize)]
-pub struct UpdateProfileReq {
+pub struct UpdateProfileRequest {
     pub bio: Option<String>,
     pub pronouns: Option<String>,
     pub accent_color: Option<u64>,
-    pub theme_colors: Option<Vec<Option<u64>>>,
+    pub theme_colors: Option<Vec<Option<u64>>>
 }
 
 #[derive(FromRow)]
