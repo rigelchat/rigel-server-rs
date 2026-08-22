@@ -43,7 +43,6 @@ CREATE DATABASE rigel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    ```bash
    cp .env.example .env
    ```
-   > [!INFO] Most variables have built-in default values. At minimum, ensure your `DATABASE_URL` is configured.
 4. Run the executable (database migrations will run automatically on startup):
    ```bash
    # Linux / macOS
@@ -53,6 +52,9 @@ CREATE DATABASE rigel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    # Windows
    .\rigel-server.exe
    ```
+
+> [!IMPORTANT]
+> Most variables have built-in default values. At minimum, ensure your `DATABASE_URL` is configured.
 
 ---
 
