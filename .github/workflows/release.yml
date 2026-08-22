@@ -1,0 +1,127 @@
+name: Release
+
+# Trigger on semantic versioning tags (e.g., v1.0.0, v2.1.3)
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. Build and package Rust binaries
+  # --------------------------------------------------------------------------
+  build-and-upload:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows
+          - { os: windows-latest, target: x86_64-pc-windows-msvc }
+          - { os: windows-latest, target: i686-pc-windows-msvc }
+
+          # macOS
+          - { os: macos-latest,  target: aarch64-apple-darwin }
+          - { os: macos-13,      target: x86_64-apple-darwin }
+
+          # Linux
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-gnu }
+          - { os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf }
+          - { os: ubuntu-latest, target: armv6-unknown-linux-musleabihf }
+
+          # Android
+          - { os: ubuntu-latest, target: aarch64-linux-android }
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build, package, and upload release assets
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: rigel-server
+          target: ${{ matrix.target }}
+          tar: unix
+          zip: windows
+          checksum: sha256
+          include: README.md,LICENSE*
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # --------------------------------------------------------------------------
+  # 2. Generate Changelog, Contributors & Update Release page
+  # --------------------------------------------------------------------------
+  update-release-guide:
+    name: Update Release Guide
+    needs: build-and-upload
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate commits list and contributors
+        id: git_info
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"* %s ([%h](${{ github.server_url }}/${{ github.repository }}/commit/%H))" --no-merges)
+            CONTRIBUTORS=$(git log --pretty=format:"* %an" | sort -u)
+          else
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"* %s ([%h](${{ github.server_url }}/${{ github.repository }}/commit/%H))" --no-merges)
+            CONTRIBUTORS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"* %an" | sort -u)
+          fi
+
+          {
+            echo "commits<<EOF"
+            echo "$COMMITS"
+            echo "EOF"
+            echo "contributors<<EOF"
+            echo "$CONTRIBUTORS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## Downloads
+
+            | OS | Architecture | Package | Checksum |
+            | :--- | :--- | :---: | :---: |
+            | 🪟 **Windows** | `x86_64` (64-bit) | [📦 .zip](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-pc-windows-msvc.zip) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-pc-windows-msvc.zip.sha256) |
+            | | `i686` (32-bit) | [📦 .zip](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-i686-pc-windows-msvc.zip) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-i686-pc-windows-msvc.zip.sha256) |
+            | 🍎 **macOS** | Apple Silicon (`aarch64`) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-apple-darwin.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-apple-darwin.tar.gz.sha256) |
+            | | Intel (`x86_64`) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-apple-darwin.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-apple-darwin.tar.gz.sha256) |
+            | 🐧 **Linux** | `x86_64` (glibc) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-unknown-linux-gnu.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-unknown-linux-gnu.tar.gz.sha256) |
+            | | `x86_64` (musl static) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-unknown-linux-musl.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-x86_64-unknown-linux-musl.tar.gz.sha256) |
+            | | `ARM64` (AArch64) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-unknown-linux-gnu.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-unknown-linux-gnu.tar.gz.sha256) |
+            | | `ARMv7` (32-bit HF) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-armv7-unknown-linux-gnueabihf.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-armv7-unknown-linux-gnueabihf.tar.gz.sha256) |
+            | | `ARMv6` (32-bit musl) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-arm-unknown-linux-musleabihf.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-arm-unknown-linux-musleabihf.tar.gz.sha256) |
+            | 🤖 **Android** | `ARM64` (AArch64) | [📦 .tar.gz](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-linux-android.tar.gz) | [🔒 sha256](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/rigel-server-aarch64-linux-android.tar.gz.sha256) |
+
+            ---
+
+            ## Commits in this Release
+
+            ${{ steps.git_info.outputs.commits }}
+
+            ---
+
+            ## Contributors
+
+            ${{ steps.git_info.outputs.contributors }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

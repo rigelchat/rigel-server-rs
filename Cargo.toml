@@ -1,5 +1,5 @@
 [package]
-name = "rigel-server-rs"
+name = "rigel-server"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,7 +8,7 @@ tokio = { version = "1.52.3", features = ["full"] }
 futures-util = "0.3.32"
 dotenvy = "0.15.7"
 axum = { version = "0.8.9", features = ["multipart", "ws"] }
-tower-http = { version = "0.6.11", features = ["cors", "fs"] }
+tower-http = { version = "0.6.11", features = ["cors", "fs", "trace"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 chrono = { version = "0.4.38", features = ["serde"] }

@@ -5,68 +5,93 @@
 
   An alternative implementation of the Discord API, written in Rust.
 
+  [![Release](https://img.shields.io/github/v/release/rigelchat/server?style=for-the-badge&logo=github)](https://github.com/rigelchat/server/releases/latest)
   [![License](https://img.shields.io/badge/License-AGPLv3-blue.svg?style=for-the-badge)](LICENSE)
   [![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
 </div>
 
 ## Introduction
 
-Rigel is a self-hostable, alternative server implementation compatible with the Discord API and client ecosystem. Developed as an independent project, it is designed to be compatible with both **[Spacebar](https://github.com/spacebarchat)** or **[https://github.com/fluxerapp/fluxer](Fluxer)**.
+Rigel is a self-hostable, alternative server implementation compatible with the Discord API and client ecosystem. Developed as an independent project, it is designed to be compatible with both [**Spacebar**](https://github.com/spacebarchat) or [**Fluxer**](https://github.com/fluxerapp/fluxer).
 
-This repository contains the backend codebase, which includes the REST API, Gateway (WebSocket), and CDN.
+This repository contains the core backend codebase, including the REST API, Gateway (WebSocket), and CDN.
 
 ## Prerequisites
 
-* Rust compiler (latest stable)
-* MySQL or MariaDB
+* **MySQL** (>= 8.0) or **MariaDB** (>= 10.5)
+* *(Optional)* **Rust toolchain** (latest stable, only if building from source)
 
-## Getting Started
+---
 
-### 1. Clone the repository
+## Installation & Setup
 
-```bash
-git clone https://github.com/rigelchat/rigel-server-rs.git
-cd rigel-server-rs
-```
+### 1. Database Initialization
 
-### 2. Database Setup
+Create a dedicated database for Rigel with utf8mb4 encoding:
 
-Rigel requires a MySQL or MariaDB database.
-
-Log into your database console:
 ```sql
 CREATE DATABASE rigel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 3. Configuration
+---
 
-Copy the example environment file and configure your database connection and secrets:
+### Option A: Using Pre-built Binaries (Recommended)
 
-```bash
-cp .env.example .env
-```
+1. Download the archive matching your OS and architecture from the [**Latest Releases**](https://github.com/rigelchat/server/releases/latest).
+2. Extract the archive into your desired directory.
+3. Copy `.env.example` to `.env` (or create one) and adjust your configuration.
+   ```bash
+   cp .env.example .env
+   ```
+   > [!INFO] Most variables have built-in default values. At minimum, ensure your `DATABASE_URL` is configured.
+4. Run the executable (database migrations will run automatically on startup):
+   ```bash
+   # Linux / macOS
+   chmod +x rigel-server
+   ./rigel-server
 
-*Edit `.env` to set your own `PORT`, `DATABASE_URL`, and `AUTH_SECRET`.*
+   # Windows
+   .\rigel-server.exe
+   ```
 
-### 4. Running the Server
+---
 
-To start the server in development mode (this will automatically run database migrations):
+### Option B: Building from Source (Developers)
 
-```bash
-cargo run
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/rigelchat/server.git
+   cd server
+   ```
 
-For production builds:
+2. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your database credentials and secret key
+   ```
 
-```bash
-cargo build --release
-```
+3. Run in development mode (with auto-migrations):
+   ```bash
+   cargo run
+   ```
 
-The API will listen at `http://localhost:3000/api/v1` (also accessible via `http://localhost:3000/api`).
+4. Or build an optimized release binary:
+   ```bash
+   cargo build --release
+   ./target/release/rigel-server
+   ```
+
+---
+
+## Server Endpoints
+
+Once started, the server listens by default on port `3000`:
+* **REST API:** `http://localhost:3000/api/v1` (alias: `http://localhost:3000/api`)
+* **Gateway (WebSocket):** `ws://localhost:3000/gateway`
 
 ## Testing
 
-Run the test suite with:
+Run the automated test suite:
 
 ```bash
 cargo test
@@ -74,10 +99,10 @@ cargo test
 
 ## API Documentation
 
-Rigel aims for compatibility with the Discord API. You can refer to the official Discord developer documentation or check the [Wiki](https://github.com/rigelchat/rigel-server-rs/wiki) for project-specific details.
+Rigel aims for 1:1 compatibility with the Discord API. Refer to the official [Discord Developer Portal](https://discord.com/developers/docs/intro) or check our [Wiki](https://github.com/rigelchat/server/wiki) for project-specific details.
 
 ---
 
 <div align="center">
-  <sub>Part of the <a href="https://github.com/rigelchat">Rigel Project</a>.<sub>
+  <sub>Part of the <a href="https://github.com/rigelchat">Rigel Project</a>.</sub>
 </div>
